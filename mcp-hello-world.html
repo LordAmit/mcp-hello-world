@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MCP - Hello World</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: three lanes (host | wire | files) over a step panel; black boxes stay black in both themes. */
+:root{
+  --bg:#f2f4f6; --fg:#16212b; --muted:#5b6b7a; --line:#d5dbe1; --panel:#ffffff;
+  --box:#111418; --box-fg:#e6e9ec; --box-line:#2a3038;
+  --accent:#0e7490; --accent-soft:#d7eef3; --hot:#c2410c; --hot-soft:#fde7d9; --ok:#15803d;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1317; --fg:#e4e8ec; --muted:#9aa7b3; --line:#2a323b; --panel:#171c22;
+    --box:#07090b; --box-fg:#e6e9ec; --box-line:#2a3038;
+    --accent:#4fb3c9; --accent-soft:#12303a; --hot:#f59e6b; --hot-soft:#3a2214; --ok:#4ade80;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1317; --fg:#e4e8ec; --muted:#9aa7b3; --line:#2a323b; --panel:#171c22;
+  --box:#07090b; --box-fg:#e6e9ec; --box-line:#2a3038;
+  --accent:#4fb3c9; --accent-soft:#12303a; --hot:#f59e6b; --hot-soft:#3a2214; --ok:#4ade80;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1240px;margin:0 auto;display:grid;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 24px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(28px,4vw,44px);margin:0;letter-spacing:-.02em;text-wrap:balance}
+.sub{color:var(--muted);margin:0;max-width:60ch}
+.kbd{font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:4px;padding:0 5px;color:var(--muted)}
+
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.stage{grid-template-columns:1fr}}
+.lane{display:grid;gap:10px;min-width:0}
+.lane-title{font-family:var(--display);font-weight:500;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* black boxes */
+.box[hidden],.msg[hidden]{display:none}
+.wire-empty{border:1px dashed var(--line);border-radius:6px;padding:14px;color:var(--muted);font-size:14px;text-align:center}
+.box{background:var(--box);color:var(--box-fg);border:1px solid var(--box-line);border-radius:6px;min-width:0;cursor:pointer;transition:box-shadow .2s,outline-color .2s;outline:2px solid transparent;outline-offset:2px}
+.box:focus-visible{outline-color:var(--accent)}
+.box.lit{outline-color:var(--hot);box-shadow:0 0 0 4px var(--hot-soft)}
+.box-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;font-family:var(--mono);font-size:14px}
+.box-head .hint{font-family:var(--body);font-size:12px;color:#9aa7b3}
+.box.open .box-head .hint .closed, .box:not(.open) .box-head .hint .opened{display:none}
+.box-body{display:none;border-top:1px solid var(--box-line);overflow-x:auto}
+.box.open .box-body{display:block}
+pre{margin:0;font-family:var(--mono);font-size:13px;line-height:1.55;padding:10px 0}
+.ln{display:block;padding:0 12px 0 44px;position:relative;white-space:pre}
+.ln::before{content:attr(data-n);position:absolute;left:0;width:32px;text-align:right;color:#5b6b7a}
+.ln.hl{background:#3a2214;box-shadow:inset 3px 0 0 var(--hot)}
+.ln.hl::before{color:var(--hot)}
+.box-note{padding:8px 12px 10px;font-size:13px;color:#9aa7b3;border-top:1px solid var(--box-line)}
+
+/* wire */
+.wire{display:grid;gap:6px}
+.msg{display:grid;grid-template-columns:28px 1fr;gap:8px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);cursor:pointer;font-family:var(--mono);font-size:13px;color:var(--muted);min-width:0}
+.msg .dir{font-family:var(--body);font-weight:600;text-align:center;color:var(--accent)}
+.msg .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msg.event{border-style:dashed;font-family:var(--body)}
+.msg.event .dir{color:var(--muted)}
+.msg.done{color:var(--fg)}
+.msg.active{border-color:var(--hot);background:var(--hot-soft);color:var(--fg)}
+.msg.active .dir{color:var(--hot)}
+.msg:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.legend{font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+
+/* step panel */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 20px;display:grid;grid-template-rows:auto 3.2em auto auto;gap:10px;min-height:210px}
+.panel-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.step-n{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+h2{font-family:var(--display);font-weight:700;font-size:clamp(20px,2.6vw,28px);margin:0;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prose{max-width:72ch;margin:0;display:grid;gap:8px;overflow:hidden}
+.prose p{margin:0}
+.prose code{font-family:var(--mono);font-size:.92em;background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+details{border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+details.none{visibility:hidden}
+summary{cursor:pointer;padding:8px 12px;font-family:var(--mono);font-size:13px;color:var(--accent)}
+details pre{padding:4px 12px 12px;overflow-x:auto;white-space:pre;font-size:12.5px}
+details .k{color:var(--accent)} details .s{color:var(--hot)} details .num{color:var(--ok)}
+.nav{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+button{font:inherit;font-weight:600;padding:9px 16px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer}
+button.ghost{background:transparent;color:var(--accent)}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+.progress{flex:1;min-width:120px;height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--hot);transition:width .25s}
+@media (prefers-reduced-motion: reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>MCP - Hello World</h1>
+      <p class="sub">Breaking down the connection from Claude Desktop to Local MCP Server.</p>
+    </div>
+  </header>
+
+  <section class="panel" aria-live="polite">
+    <div class="panel-top">
+      <h2 id="step-title"></h2>
+      <span class="step-n" id="step-n"></span>
+    </div>
+    <div class="prose" id="step-prose"></div>
+    <details id="step-json"><summary>JSON-RPC message</summary><pre id="step-json-pre"></pre></details>
+    <div class="nav">
+      <button class="ghost" id="prev">← Back</button>
+      <button id="next">Next →</button>
+      <div class="progress"><i id="bar"></i></div>
+    </div>
+  </section>
+
+  <div class="stage">
+    <section class="lane" aria-label="Host">
+      <div class="lane-title">LLM Client (Claude Desktop)</div>
+      <div class="box" id="box-config" tabindex="0" role="button" aria-expanded="false">
+        <div class="box-head"><span>claude_desktop_config.json</span><span class="hint"><span class="closed">click to open</span><span class="opened">click to close</span></span></div>
+        <div class="box-body"><pre id="code-config"></pre>
+          <div class="box-note">The only thing the client knows about the server: a name, a command, and its arguments.</div></div>
+      </div>
+      <div class="box" id="box-model" tabindex="0" role="button" aria-expanded="false">
+        <div class="box-head"><span>LLM</span><span class="hint"><span class="closed">click to open</span><span class="opened">click to close</span></span></div>
+        <div class="box-body"><pre id="code-model"></pre>
+          <div class="box-note">The LLM receives a tool description and decides whether to call it. The client makes the call.</div></div>
+      </div>
+    </section>
+
+    <section class="lane" aria-label="Messages between client and server">
+      <div class="lane-title">Details: stdin / stdout</div>
+      <div class="wire" id="wire"><div class="wire-empty" id="wire-empty">nothing yet</div></div>
+      <div class="legend"><span>→ client to server</span><span>← server to client</span><span>dashed: process event</span></div>
+    </section>
+
+    <section class="lane" aria-label="Your files">
+      <div class="lane-title">MCP Server: Three Files</div>
+      <div class="box" id="box-server" tabindex="0" role="button" aria-expanded="false">
+        <div class="box-head"><span>server.py</span><span class="hint"><span class="closed">15 lines, click to open</span><span class="opened">click to close</span></span></div>
+        <div class="box-body"><pre id="code-server"></pre>
+          <div class="box-note">Imports the SDK and <span style="font-family:var(--mono)">hello.greet</span>, registers one tool, runs on stdio.</div></div>
+      </div>
+      <div class="box" id="box-pyproject" tabindex="0" role="button" aria-expanded="false">
+        <div class="box-head"><span>pyproject.toml</span><span class="hint"><span class="closed">7 lines, click to open</span><span class="opened">click to close</span></span></div>
+        <div class="box-body"><pre id="code-pyproject"></pre>
+          <div class="box-note">Declares the <span style="font-family:var(--mono)">mcp</span> dependency. <span style="font-family:var(--mono)">uv.lock</span> records the exact versions installed.</div></div>
+      </div>
+      <div class="box" id="box-hello" tabindex="0" role="button" aria-expanded="false">
+        <div class="box-head"><span>hello.py</span><span class="hint"><span class="closed">3 lines, click to open</span><span class="opened">click to close</span></span></div>
+        <div class="box-body"><pre id="code-hello"></pre>
+          <div class="box-note">No MCP import. A plain Python function.</div></div>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<script>
+const FILES = {
+  server: [
+'from mcp.server.mcpserver import MCPServer',
+'',
+'from hello import greet as _greet',
+'',
+'mcp = MCPServer("hello-world")',
+'',
+'',
+'@mcp.tool()',
+'def greet(name: str) -> str:',
+'    """Greet someone by name. Returns \'Hello <name>\'."""',
+'    return _greet(name)',
+'',
+'',
+'if __name__ == "__main__":',
+'    mcp.run(transport="stdio")'],
+  pyproject: [
+'[project]',
+'name = "mcp-hello-world"',
+'version = "0.1.0"',
+'requires-python = ">=3.11"',
+'dependencies = [',
+'    "mcp>=2.3.0",',
+']'],
+  hello: [
+'def greet(name: str) -> str:',
+'    """Return a greeting for the given name."""',
+'    return f"Hello {name}"'],
+  config: [
+'{',
+'  "mcpServers": {',
+'    "hello-world": {',
+'      "command": "uv",',
+'      "args": [',
+'        "--directory",',
+'        "/path/to/mcp-hello-world",',
+'        "run",',
+'        "server.py"',
+'      ]',
+'    }',
+'  }',
+'}'],
+  model: [
+'# what the client gives the LLM:',
+'tools = [{',
+'  "name": "greet",',
+'  "description": "Greet someone by name. Returns \'Hello <name>\'.",',
+'  "input_schema": {"type": "object",',
+'                   "properties": {"name": {"type": "string"}},',
+'                   "required": ["name"]}',
+'}]',
+'',
+'# what the LLM emits for the message "greet Claude":',
+'{"type": "tool_use", "name": "greet", "input": {"name": "Claude"}}']
+};
+
+// Real traffic captured from this server (python-side run, 2026-10-29).
+const RPC = {
+  init_req: {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"claude-desktop","version":"1.0.0"}}},
+  init_res: {"jsonrpc":"2.0","id":1,"result":{"capabilities":{"prompts":{"listChanged":false},"resources":{"listChanged":false,"subscribe":false},"tools":{"listChanged":false}},"protocolVersion":"2025-06-18","serverInfo":{"name":"hello-world","version":""}}},
+  initialized: {"jsonrpc":"2.0","method":"notifications/initialized"},
+  list_req: {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}},
+  list_res: {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"greet","description":"Greet someone by name. Returns 'Hello <name>'.","inputSchema":{"type":"object","title":"greetArguments","properties":{"name":{"title":"Name","type":"string"}},"required":["name"]},"outputSchema":{"type":"object","title":"greetOutput","properties":{"result":{"title":"Result","type":"string"}},"required":["result"]}}]}},
+  call_req: {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"greet","arguments":{"name":"Claude"}}},
+  call_res: {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"Hello Claude"}],"isError":false,"structuredContent":{"result":"Hello Claude"}}}
+};
+
+// ===================== EDIT HERE =====================
+// Each step: title, prose (array of HTML strings, one per paragraph),
+// reveal (boxes that appear from this step on: config, model, server, pyproject, hello),
+// lit (boxes outlined), hl (highlighted line numbers per file),
+// wire ({kind:"event"|"msg", dir:"→"|"←", label}) or null, rpc (key in RPC above, optional).
+// =====================================================
+const STEPS = [
+  {title:"Nothing has been run yet.",
+   prose:["<code>hello.py</code> is an independent python file that just contains a function."],
+   reveal:["config","hello"], lit:["hello"], hl:{}, wire:null},
+
+  {title:"Session Starts",
+   prose:["The LLM Client reads the list of available MCP servers from a config file, and finds One JSON entry that contains: a name, a command, its arguments."],
+   reveal:[], lit:["config"], hl:{config:[3,4,5,6,7,8,9,10]}, wire:{kind:"event",label:"read claude_desktop_config.json"}},
+
+  {title:"Client Starts the Server",
+   prose:["The client runs the command from the config as a child process, and connects to its stdin and stdout."],
+   reveal:["pyproject","server"], lit:["config"], hl:{config:[4,5,6,7,8,9,10]}, wire:{kind:"event",label:"spawn: uv run server.py  (stdin, stdout piped)"}},
+
+  {title:"Server Waits",
+   prose:["<code>server.py</code> registers <code>greet</code> as a tool, then waits for input on stdin."],
+   reveal:[], lit:["server"], hl:{server:[8,9,10,11,15]}, wire:{kind:"event",label:"server.py: register tool, wait on stdin"}},
+
+  {title:"Client → initialize",
+   prose:["The client sends a JSON-RPC request with its protocol version and name; the <code>id</code> means it expects a reply."],
+   reveal:[], lit:[], hl:{}, wire:{kind:"msg",dir:"→",label:"initialize"}, rpc:"init_req"},
+
+  {title:"Server ← initialize result",
+   prose:["The server replies with the same <code>id</code>, its name, and the capabilities it supports."],
+   reveal:[], lit:["server"], hl:{server:[5]}, wire:{kind:"msg",dir:"←",label:"initialize result"}, rpc:"init_res"},
+
+  {title:"Client → initialized",
+   prose:["The client sends a notification; it has no <code>id</code>, so no reply is expected."],
+   reveal:[], lit:[], hl:{}, wire:{kind:"msg",dir:"→",label:"notifications/initialized"}, rpc:"initialized"},
+
+  {title:"Client → tools/list",
+   prose:["The client asks the server for its list of tools."],
+   reveal:[], lit:[], hl:{}, wire:{kind:"msg",dir:"→",label:"tools/list"}, rpc:"list_req"},
+
+  {title:"Server ← tools/list result",
+   prose:["The server returns one tool: the name from the function, the description from the docstring, the input schema from the type hints."],
+   reveal:[], lit:["server"], hl:{server:[8,9,10]}, wire:{kind:"msg",dir:"←",label:"tools/list result  (greet + schema)"}, rpc:"list_res"},
+
+  {title:"User Sends a Message",
+   prose:["The client sends the message and the tool list to the LLM, which responds with a <code>tool_use</code> block for <code>greet</code> with <code>name: Claude</code>."],
+   reveal:["model"], lit:["model"], hl:{model:[2,3,4,5,6,7,8,10,11]}, wire:{kind:"event",label:"LLM emits tool_use: greet(name=\"Claude\")"}},
+
+  {title:"Client → tools/call",
+   prose:["The client sends the tool name and arguments to the server, which validates them against the schema."],
+   reveal:[], lit:[], hl:{}, wire:{kind:"msg",dir:"→",label:"tools/call greet {name: \"Claude\"}"}, rpc:"call_req"},
+
+  {title:"Server Runs the Function",
+   prose:["Line 11 of <code>server.py</code> calls <code>greet</code> in <code>hello.py</code>, which returns the string."],
+   reveal:[], lit:["server","hello"], hl:{server:[11],hello:[3]}, wire:{kind:"event",label:"greet(\"Claude\") → hello.greet → \"Hello Claude\""}},
+
+  {title:"Server ← tools/call result",
+   prose:["The server returns the string as a text content block."],
+   reveal:[], lit:[], hl:{}, wire:{kind:"msg",dir:"←",label:"tools/call result  \"Hello Claude\""}, rpc:"call_res"},
+
+  {title:"LLM Replies",
+   prose:["The client passes the result to the LLM, which writes its reply; the chat shows Hello Claude."],
+   reveal:[], lit:["model"], hl:{}, wire:{kind:"event",label:"chat shows: Hello Claude"}}
+];
+
+// ---- render files ----
+function renderFile(id, lines){
+  const pre=document.getElementById('code-'+id); pre.textContent='';
+  lines.forEach((t,i)=>{const s=document.createElement('span');s.className='ln';s.dataset.n=i+1;s.dataset.file=id;s.dataset.line=i+1;s.textContent=t.length?t:' ';pre.appendChild(s);});
+}
+Object.entries(FILES).forEach(([k,v])=>renderFile(k,v));
+
+// ---- boxes ----
+document.querySelectorAll('.box').forEach(b=>{
+  const toggle=()=>{b.classList.toggle('open');b.setAttribute('aria-expanded',b.classList.contains('open'));};
+  b.addEventListener('click',e=>{ if(e.target.closest('pre')) return; toggle(); });
+  b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});
+});
+
+// ---- wire ----
+const wireEl=document.getElementById('wire');
+const wireIndex=[]; // step index for each wire item
+STEPS.forEach((s,i)=>{
+  if(!s.wire) return;
+  const d=document.createElement('div');
+  d.className='msg '+(s.wire.kind==='event'?'event':'');
+  d.tabIndex=0; d.setAttribute('role','button');
+  d.innerHTML=`<span class="dir">${s.wire.kind==='event'?'·':s.wire.dir}</span><span class="lbl"></span>`;
+  d.querySelector('.lbl').textContent=s.wire.label;
+  d.addEventListener('click',()=>go(i));
+  d.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go(i);}});
+  wireEl.appendChild(d); wireIndex.push(i); s._el=d;
+});
+
+// ---- json pretty ----
+function prettyJSON(obj){
+  const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const json=JSON.stringify(obj,null,2);
+  return esc(json).replace(/("(?:[^"\\]|\\.)*")(\s*:)?|\b(true|false|null)\b|-?\d+(\.\d+)?/g,(m,str,colon,kw)=>{
+    if(str) return colon?`<span class="k">${str}</span>${colon}`:`<span class="s">${str}</span>`;
+    if(kw) return `<span class="num">${kw}</span>`;
+    return `<span class="num">${m}</span>`;
+  });
+}
+
+// ---- steps ----
+let cur=0;
+const titleEl=document.getElementById('step-title'), nEl=document.getElementById('step-n'), proseEl=document.getElementById('step-prose'),
+      jsonEl=document.getElementById('step-json'), jsonPre=document.getElementById('step-json-pre'), bar=document.getElementById('bar'),
+      prevB=document.getElementById('prev'), nextB=document.getElementById('next');
+
+function go(i){
+  cur=Math.max(0,Math.min(STEPS.length-1,i));
+  const s=STEPS[cur];
+  titleEl.textContent=s.title;
+  nEl.textContent=`step ${cur+1} of ${STEPS.length}`;
+  proseEl.innerHTML=s.prose.map(p=>`<p>${p}</p>`).join('');
+  jsonEl.open=false;
+  if(s.rpc){ jsonEl.classList.remove('none'); jsonPre.innerHTML=prettyJSON(RPC[s.rpc]); }
+  else { jsonEl.classList.add('none'); jsonPre.innerHTML=''; }
+  bar.style.width=((cur)/(STEPS.length-1)*100)+'%';
+  prevB.disabled=cur===0; nextB.disabled=cur===STEPS.length-1;
+  // reveal boxes cumulatively
+  const shown=new Set(); STEPS.slice(0,cur+1).forEach(st=>st.reveal.forEach(x=>shown.add(x)));
+  document.querySelectorAll('.box').forEach(b=>{const k=b.id.replace('box-','');b.hidden=!shown.has(k);b.classList.toggle('lit', s.lit.includes(k));});
+  // lines
+  document.querySelectorAll('.ln').forEach(l=>{
+    const want=s.hl[l.dataset.file]; l.classList.toggle('hl', !!(want && want.includes(+l.dataset.line)));
+  });
+  // wire states
+  let any=false;
+  STEPS.forEach((st,j)=>{ if(!st._el) return; st._el.hidden=j>cur; if(j<=cur) any=true; st._el.classList.toggle('active', j===cur); st._el.classList.toggle('done', j<cur); });
+  document.getElementById('wire-empty').hidden=any;
+  try{ localStorage.setItem('mcp-hw-step', String(cur)); }catch(e){}
+}
+prevB.addEventListener('click',()=>go(cur-1));
+nextB.addEventListener('click',()=>go(cur+1));
+document.addEventListener('keydown',e=>{
+  if(e.target.closest('details, button, .box, .msg') && (e.key===' '||e.key==='Enter')) return;
+  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();go(cur+1);}
+  if(e.key==='ArrowLeft'){e.preventDefault();go(cur-1);}
+});
+let start=0; try{ start=+(localStorage.getItem('mcp-hw-step')||0)||0; }catch(e){}
+go(start);
+</script>
+
+</body>
+</html>
